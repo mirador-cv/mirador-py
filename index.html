@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Mirador-py by mirador-cv</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Mirador-py</h1>
+        <p>A python client for the mirador (http://mirador.im) API</p>
+
+        <p class="view"><a href="https://github.com/mirador-cv/mirador-py">View the Project on GitHub <small>mirador-cv/mirador-py</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/mirador-cv/mirador-py/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/mirador-cv/mirador-py/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/mirador-cv/mirador-py">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a name="mirador-py" class="anchor" href="#mirador-py"><span class="octicon octicon-link"></span></a>Mirador-Py</h1>
+
+<p>A python client for the Mirador <a href="http://mirador.im">Image Moderation API</a>. To get started, you will need an API Key, available at <a href="http://mirador.im/join">mirador.im/join</a>. For questions about keys or support with this module please email <a href="mailto:support@mirador.im">support@mirador.im</a>.</p>
+
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>The module is available <a href="https://pypi.python.org/pypi/Mirador">on pypi</a>, and can be installed with pip:</p>
+
+<pre lang="shell"><code>pip install mirador
+</code></pre>
+
+<h2>
+<a name="getting-started-command-line-tool" class="anchor" href="#getting-started-command-line-tool"><span class="octicon octicon-link"></span></a>Getting started: command-line tool</h2>
+
+<p>For command-line use, the package installs a script called <code>mirador-client</code> that will be added to your path. For usage please enter <code>mirador-client -h</code>, basic usage is:</p>
+
+<pre lang="shell"><code>$ mirador-client -k YOUR_API_KEY images/*.{jpg,png}`
+</code></pre>
+
+<p>In this example, we are classifying all of the images in the <code>images</code> directory on your computer. URLs can be specified on the command line, although be careful to escape them in quotes (so that characters aren't interpreted by your shell)</p>
+
+<h2>
+<a name="mirador-python-module" class="anchor" href="#mirador-python-module"><span class="octicon octicon-link"></span></a>Mirador python module</h2>
+
+<p>The python module has a simple interface in <code>mirador.MiradorClient</code>, documented here.</p>
+
+<h3>
+<a name="miradormiradorclientapi_key" class="anchor" href="#miradormiradorclientapi_key"><span class="octicon octicon-link"></span></a><code>mirador.MiradorClient(api_key)</code>
+</h3>
+
+<p>The client supports classification of either images or files, where files can be filenames or file-objects.</p>
+
+<h4>
+<a name="miradorclientclassify_filesfiles---miradorresult" class="anchor" href="#miradorclientclassify_filesfiles---miradorresult"><span class="octicon octicon-link"></span></a><code>MiradorClient.classify_files(*files) -&gt; [MiradorResult]</code>
+</h4>
+
+<p>Example code:</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">from</span> <span class="nn">mirador</span> <span class="kn">import</span> <span class="n">MiradorClient</span>
+
+<span class="n">mc</span> <span class="o">=</span> <span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_key_here'</span><span class="p">)</span>
+<span class="n">fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">'pic3.jpg'</span><span class="p">,</span> <span class="s">'rb'</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">mc</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'pic1.jpg'</span><span class="p">,</span> <span class="s">'pic2.jpg'</span><span class="p">,</span> <span class="n">fh</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">"{name}, {safe}, {value}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">res</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+</pre></div>
+
+<p>Here you can see that the <code>MiradorResult</code> object has 3 fields:</p>
+
+<ul>
+<li>
+<code>MiradorResult.name</code> - the url or filename used in the request</li>
+<li>
+<code>MiradorResult.safe</code> - (boolean) indicated if image is 'flagged' by API</li>
+<li>
+<code>MiradorResult.value</code> - (float) value 0.0 - 1.0 indicated confidence of decision</li>
+</ul><h4>
+<a name="miradorresultclassify_urlsurls---miradorresult" class="anchor" href="#miradorresultclassify_urlsurls---miradorresult"><span class="octicon octicon-link"></span></a><code>MiradorResult.classify_urls(*urls) -&gt; [MiradorResult]</code>
+</h4>
+
+<p>This has an indentical inteface to <code>classify_files</code>, except it expects http/https urls.</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">from</span> <span class="nn">mirador</span> <span class="kn">import</span> <span class="n">MiradorClient</span>
+
+<span class="n">mc</span> <span class="o">=</span> <span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_key_here'</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">mc</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'http://example.com/pic2.jpg'</span><span class="p">,</span> <span class="s">'http://example.com/pic3.jpg'</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">"{name}, {safe}, {value}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">res</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+</pre></div>
+
+<h2>
+<a name="extensions--integrations" class="anchor" href="#extensions--integrations"><span class="octicon octicon-link"></span></a>Extensions &amp; Integrations</h2>
+
+<p>We are in the process of providing extensions and integrations into common frameworks. This package contains an experimental django integration. It is highly advised against use right now, although the code is located in <a href="mirador/ext/django.py">ext/django.py</a>, if you want to take a look.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/mirador-cv">mirador-cv</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
