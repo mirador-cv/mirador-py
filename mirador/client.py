@@ -44,7 +44,7 @@ class MiradorClient(object):
         )
 
     def _params(self, data, method):
-        "prepare paramters for the request"
+        """prepare paramters for the request"""
 
         key = 'data' if method == 'post' else 'params'
         data['api_key'] = self._api_key
@@ -52,7 +52,7 @@ class MiradorClient(object):
         return {'headers': self.HEADERS, key: data}
 
     def _prepare_request(self, **data):
-        "prepare the options & parameters of request"
+        """prepare the options & parameters of request"""
         if not data or ('image' not in data and 'url' not in data):
             raise http_exceptions[400]("url(s) or image(s) required")
 
@@ -62,7 +62,7 @@ class MiradorClient(object):
         return method, params
 
     def _request(self, **data):
-        "make the request via requests module"
+        """make the request via requests module"""
 
         method, params = self._prepare_request(**data)
         r = getattr(requests, method)(self._url, **params)
@@ -72,7 +72,7 @@ class MiradorClient(object):
         return r.json()
 
     def _async_request(self, files_or_urls, on_done, **data):
-        "make an asynchronous request to the API"
+        """make an asynchronous request to the API"""
         async = import_async_requests()
 
         # very basic callback that just
@@ -97,7 +97,7 @@ class MiradorClient(object):
         async.map([r])
 
     def _read_image(self, image):
-        "read an image if it's a file and return the name"
+        """read an image if it's a file and return the name"""
 
         if isinstance(image, basestring):
             with open(image, 'rb') as imf:
@@ -106,7 +106,7 @@ class MiradorClient(object):
             return image.name, image
 
     def _prepare_image(self, im_f):
-        "convert an image name or file into base64 encoded string"
+        """convert an image name or file into base64 encoded string"""
 
         name, data = self._read_image(im_f)
 
@@ -115,7 +115,7 @@ class MiradorClient(object):
         return base64.b64encode(data)
 
     def classify_urls(self, *urls):
-        "classify url(s) and return results"
+        """classify url(s) and return list of MiradorResults"""
         if not urls:
             return []
 
@@ -129,7 +129,10 @@ class MiradorClient(object):
         )
 
     def classify_files(self, *files):
-        "classify file(s) via the mirador API"
+        """
+        classify file(s) via the mirador API
+        returns list of MiradorResult
+        """
         if not files:
             return []
 
@@ -145,5 +148,5 @@ class MiradorClient(object):
         )
 
     def async_classify_files(self, files, on_done):
-        "asynchronously classify files, using `on_done` callback"
+        """asynchronously classify files, using `on_done` callback"""
         self._async_request(image=map(self._prepare_image, files))
