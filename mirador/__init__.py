@@ -5,6 +5,7 @@ from errors import MiradorException
 from os import getenv as _genv
 
 import client
+import ext
 
 
 def classify_files(files, api_key=None):

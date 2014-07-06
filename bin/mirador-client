@@ -22,12 +22,12 @@ def die(msg):
     sys.exit(msg)
 
 
-def format_plaintext(res, delimiter):
+def format_plaintext(res):
     return "{name}{d}{safe}{d}{value}".format(
         name=res.name,
         safe=res.safe,
         value=res.value,
-        d=delimiter
+        d="\t"
     )
 
 
@@ -52,8 +52,10 @@ def classify_all(args, force_url=False, api_key=None):
             else:
                 files.append(x)
 
-        return (mc.classify_files(*files)
-                + mc.classify_urls(*urls))
+        res = mc.classify_urls(*urls) if urls and len(urls) > 0 else []
+        res += mc.classify_files(*files) if files and len(files) > 0 else []
+
+        return res
 
 
 if __name__ == "__main__":
@@ -84,8 +86,7 @@ if __name__ == "__main__":
     else:
 
         if options.header:
-            print options.delimiter.join(
-                ['name', 'safe', 'value'])
+            print "name\tsafe\tvalue"
 
         for res in results:
-            print format_plaintext(res, options.delimiter)
+            print format_plaintext(res)

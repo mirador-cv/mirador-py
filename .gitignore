@@ -1,1 +1,4 @@
 Mirador.egg-info
+*.pyc
+dist
+MANIFEST

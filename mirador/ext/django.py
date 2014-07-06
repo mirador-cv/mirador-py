@@ -1,7 +1,11 @@
 from errors import MiradorException
 from client import MiradorClient
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
+
+try:
+    from django.db.models.signals import pre_save
+    from django.dispatch import receiver
+except ImportError:
+    print "error: failed to import django"
 
 # only want to expose moderate_field
 # when someone goes after the whole package
