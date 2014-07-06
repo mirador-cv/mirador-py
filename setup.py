@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='Mirador',
-    version='0.1.1',
+    version='0.1.2',
     author='Nick Jacob - Mirador',
     author_email='nick@mirador.im',
     packages=['mirador', 'mirador.test', 'mirador.ext'],

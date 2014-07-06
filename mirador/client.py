@@ -1,3 +1,8 @@
+"""Mirador API client
+
+.. moduleauthor:: Nick Jacob <nick@mirador.im>
+
+"""
 import base64
 import requests
 from errors import http_exceptions, MiradorException
@@ -21,7 +26,8 @@ def import_async_requests():
 
 
 class MiradorClient(object):
-    """
+    """Interface for the Mirador API
+
     Simple interface for retrieving results from the
     Mirador API. Returns [MiradorResult] on all method
     """
@@ -33,10 +39,17 @@ class MiradorClient(object):
         'User-Agent': 'MiradorClient/1.0 Python'
     }
 
-    def __init__(self, api_key, **kwargs):
+    def __init__(self, api_key, timeout=10):
+        """Instaniate a MiradorClient
+        Args:
+            api_key: the mirador api key (string)
+            timeout: timeout for API access (default: 10 seconds)
 
-        if 'timeout' in kwargs:
-            self.TIMEOUT = kwargs['timeout']
+        Returns:
+            A MiradorClient instance
+        """
+
+        self.TIMEOUT = timeout or self.TIMEOUT
 
         self._api_key = api_key
         self._url = "{0}{1}".format(
@@ -115,7 +128,16 @@ class MiradorClient(object):
         return base64.b64encode(data)
 
     def classify_urls(self, *urls):
-        """classify url(s) and return list of MiradorResults"""
+        """classifies url(s) via the API
+
+        Args:
+            *urls: urls to classify. Must be publically accessible
+        Returns:
+            a list of MiradorResult objects, each with three properties:
+                name: a string representing the source url
+                safe: boolean - is the image safe (unflagged)
+                value: float representing confidence in flag result
+        """
         if not urls:
             return []
 
@@ -129,9 +151,14 @@ class MiradorClient(object):
         )
 
     def classify_files(self, *files):
-        """
-        classify file(s) via the mirador API
-        returns list of MiradorResult
+        """classifies file(s) via the API
+        Args:
+            *files: filenames or file objects
+        Returns:
+            a list of MiradorResult objects, each with three properties:
+                name: a string representing the source filename
+                safe: boolean - is the image safe (unflagged)
+                value: float representing confidence in flag result
         """
         if not files:
             return []

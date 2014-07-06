@@ -1,15 +1,16 @@
+"""Mirador Result class
+
+.. moduleauthor Nick Jacob <nick@mirador.im>
+
+"""
 from errors import http_exceptions, MiradorException
 
 
 class MiradorResult(object):
-    """
-    A result from the Mirador API.
+    """A result from the Mirador API.
     Contains fields indicating classification result:
-
-    safe - boolean value indicating whether image
-    was categoried as "sfw" (true) or "nsfw"
-
-    value - a float 0.0-1.0 representing the confidence of the classification
+        safe - boolean indicating flagging status
+        value - a float 0.0-1.0; confidence of result
     """
 
     FMT_STR = "<MiradorResult: {name}; safe: {safe}; value: {value}/>"
