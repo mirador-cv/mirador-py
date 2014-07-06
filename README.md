@@ -65,4 +65,4 @@ for res in mc.classify_files('http://example.com/pic2.jpg', 'http://example.com/
 
 ## Extensions & Integrations
 
-We are in the process of providing extensions and integrations into common frameworks. This package contains an experimental django integration. It is highly advised against use right now, although the code is located in [ext/django.py](ext/django.py), if you want to take a look.
+We are in the process of providing extensions and integrations into common frameworks. This package contains an experimental django integration. It is highly advised against use right now, although the code is located in [ext/django.py](mirador/ext/django.py), if you want to take a look.
