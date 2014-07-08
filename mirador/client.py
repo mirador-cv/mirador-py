@@ -3,10 +3,12 @@
 .. moduleauthor:: Nick Jacob <nick@mirador.im>
 
 """
+from __future__ import absolute_import
+
 import base64
 import requests
-from errors import http_exceptions, MiradorException
-from result import MiradorResult
+from .errors import http_exceptions, MiradorException
+from .result import MiradorResult
 
 
 def import_async_requests():

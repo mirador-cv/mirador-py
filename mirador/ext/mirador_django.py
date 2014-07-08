@@ -1,11 +1,15 @@
-from errors import MiradorException
-from client import MiradorClient
+from __future__ import absolute_import
+from ..errors import MiradorException
+from ..client import MiradorClient
 
 try:
+    import django.db
+    import django.db.models
     from django.db.models.signals import pre_save
     from django.dispatch import receiver
 except ImportError:
     print "error: failed to import django"
+    raise
 
 # only want to expose moderate_field
 # when someone goes after the whole package
@@ -57,7 +61,8 @@ def moderate_field(model=None, image_field_name=None,
         def on_moderation_cb(model_instance, is_safe, value):
             "is_safe - boolean, value - float"
     """
-    mirador_client = MiradorClient(api_key)
+
+    print "attaching hook"
 
     @receiver(pre_save, sender=model)
     def on_presave_signal(sender, **kwargs):
@@ -65,12 +70,17 @@ def moderate_field(model=None, image_field_name=None,
         if not 'instance' in kwargs:
             return None
 
+
         instance = kwargs['instance']
         image = get_model_image(
             instance, image_field_name)
 
+        print "received instance: {}".format(instance)
+
         if not instance or not image:
             return None
+
+        mirador_client = MiradorClient(api_key)
 
         # if the user has passed in a callback, use this by default
         # and do not update the original model. This will use an
@@ -85,6 +95,8 @@ def moderate_field(model=None, image_field_name=None,
 
             mirador_client.async_classify_files([image], moderation_cb_wrapper)
             return None
+
+        print "classifying image: {}".format(image)
 
         # if this fails, the output will be `None`
         col_data = classify_file(
