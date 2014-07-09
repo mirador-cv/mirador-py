@@ -22,7 +22,11 @@ class MiradorResult(object):
 
         res = raw['result']
 
-        if not 'safe' in res and 'value' in res:
+        if 'safe' not in res or 'value' not in res:
+
+            if 'errors' in res:
+                self.errors = res['errors']
+
             raise http_exceptions[500]("bad result: {}".format(raw))
 
         self.name = name

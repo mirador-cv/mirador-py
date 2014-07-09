@@ -7,24 +7,9 @@ from __future__ import absolute_import
 
 import base64
 import requests
+from requests import exceptions as req_exp
 from .errors import http_exceptions, MiradorException
 from .result import MiradorResult
-
-
-def import_async_requests():
-    try:
-        from grequests import async
-        return async
-    except ImportError:
-        try:
-            from requests import async
-            return async
-        except ImportError:
-            pass
-
-        raise MiradorException(
-            "grequests async library required for asynchronous requests"
-        )
 
 
 class MiradorClient(object):
@@ -36,10 +21,11 @@ class MiradorClient(object):
 
     API_BASE = "http://api.mirador.im"
     CLASSIFY_ENDPOINT = "/v1/classify"
-    TIMEOUT = 10
     HEADERS = {
         'User-Agent': 'MiradorClient/1.0 Python'
     }
+
+    MAX_LEN = 2
 
     def __init__(self, api_key, timeout=10):
         """Instaniate a MiradorClient
@@ -50,8 +36,6 @@ class MiradorClient(object):
         Returns:
             A MiradorClient instance
         """
-
-        self.TIMEOUT = timeout or self.TIMEOUT
 
         self._api_key = api_key
         self._url = "{0}{1}".format(
@@ -64,13 +48,26 @@ class MiradorClient(object):
         key = 'data' if method == 'post' else 'params'
         data['api_key'] = self._api_key
 
-        return {'headers': self.HEADERS, key: data}
+        return {
+            'headers': self.HEADERS,
+
+            # data is of the appropraite key
+            key: data,
+
+            # set the timeout to a factor of the # pix
+            'timeout': self._timeout(len(data))
+        }
+
+    def _timeout(self, num_pix):
+        return (float(num_pix) * 2.75)
 
     def _prepare_request(self, **data):
         """prepare the options & parameters of request"""
+
         if not data or ('image' not in data and 'url' not in data):
             raise http_exceptions[400]("url(s) or image(s) required")
 
+        # assign the correct method based on type
         method = 'get' if not 'image' in data else 'post'
         params = self._params(data, method)
 
@@ -80,36 +77,27 @@ class MiradorClient(object):
         """make the request via requests module"""
 
         method, params = self._prepare_request(**data)
-        r = getattr(requests, method)(self._url, **params)
+
+        try:
+            r = getattr(requests, method)(self._url, **params)
+        except req_exp.ConnectionError:
+            raise MiradorException(
+                "could not connect to server: check your network connection",
+                400
+            )
+        except req_exp.HTTPError:
+            raise http_exceptions[
+                (r.status_code if r else 500)
+            ]("unexpected error")
+        except req_exp.Timeout:
+            raise http_exceptions[500](
+                "Timeout occurred. Try again with fewer request objects"
+            )
 
         if r.status_code != 200:
             raise http_exceptions[r.status_code](r.text)
-        return r.json()
 
-    def _async_request(self, files_or_urls, on_done, **data):
-        """make an asynchronous request to the API"""
-        async = import_async_requests()
-
-        # very basic callback that just
-        # parses the response and hands it off
-        # to the handler
-        def handle_async_response(response):
-            if response.status_code == 200:
-                on_done(
-                    MiradorResult.parse_results_safe(
-                        files_or_urls,
-                        response.json().get('results', None)
-                    )
-                )
-
-        method, params = self._prepare_request(**data)
-
-        # set up our response hook
-        params['hooks'] = {'response': handle_async_response}
-        r = getattr(async, method)(self._url, **params)
-
-        # execute the request
-        async.map([r])
+        return r.json() if r.text else {}
 
     def _read_image(self, image):
         """read an image if it's a file and return the name"""
@@ -118,7 +106,7 @@ class MiradorClient(object):
             with open(image, 'rb') as imf:
                 return image, imf.read()
         else:
-            return image.name, image
+            return image.name, image.read()
 
     def _prepare_image(self, im_f):
         """convert an image name or file into base64 encoded string"""
@@ -127,7 +115,16 @@ class MiradorClient(object):
 
         if not data:
             raise http_exceptions[400]("no image data for: {}".format(name))
-        return base64.b64encode(data)
+        return name, base64.b64encode(data)
+
+    def _chunk_and_flatten(self, fn, L):
+        res = [
+            fn(*L[i:i + self.MAX_LEN])
+            for i in xrange(0, len(L), self.MAX_LEN)
+        ]
+
+        # flatten the results
+        return [x for sl in res for x in sl]
 
     def classify_urls(self, *urls):
         """classifies url(s) via the API
@@ -140,8 +137,12 @@ class MiradorClient(object):
                 safe: boolean - is the image safe (unflagged)
                 value: float representing confidence in flag result
         """
+
         if not urls:
             return []
+
+        if len(urls) > self.MAX_LEN:
+            return self._chunk_and_flatten(self.classify_urls, urls)
 
         if isinstance(urls[0], (list, tuple)):
             urls = urls[0]
@@ -150,6 +151,27 @@ class MiradorClient(object):
 
         return MiradorResult.parse_results(
             urls, res.get('results', None)
+        )
+
+    def classify_raw(self, buffers):
+        """Classify raw strings representing the files
+        Args:
+            buffers: {filenames => strings} of raw image data
+        Returns:
+            lit of MiradorResult objects
+        """
+        if not buffers:
+            return []
+
+        res = self._request(
+            image=map(
+                lambda b: base64.b64encode(b).replace("\n", ''),
+                buffers.values()
+            )
+        )
+
+        return MiradorResult.parse_results(
+            buffers.keys(), res.get('results', None)
         )
 
     def classify_files(self, *files):
@@ -168,14 +190,12 @@ class MiradorClient(object):
         if isinstance(files[0], (list, tuple)):
             files = files[0]
 
+        filedata = map(self._prepare_image, files)
+
         res = self._request(
-            image=map(self._prepare_image, files)
+            image=map(lambda x: x[1], filedata)
         )
 
         return MiradorResult.parse_results(
-            files, res.get('results', None)
+            map(lambda x: x[0], filedata), res.get('results', None)
         )
-
-    def async_classify_files(self, files, on_done):
-        """asynchronously classify files, using `on_done` callback"""
-        self._async_request(image=map(self._prepare_image, files))

@@ -8,9 +8,11 @@ class MiradorException(HTTPException):
     code = 500
 
     def __init__(self, *args, **kwargs):
+        code = kwargs.get('code', self.code)
         super(MiradorException, self).__init__(
             "[{code}]: {message}".format(
-                message=" ".join(map(str, args)), code=self.code)
+                message=" ".join(map(str, args)), code=code
+            )
         )
 
 
@@ -18,7 +20,7 @@ class InvalidRequestException(MiradorException):
     code = 400
 
     def __init__(self, *args, **kwargs):
-        super(InvalidRequestException, self, *args, **kwargs).__init__(
+        super(InvalidRequestException, self).__init__(
             "must include valid URL or file"
         )
 
