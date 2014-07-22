@@ -3,7 +3,7 @@ from mirador.client import MiradorClient
 from os import getenv as _genv
 from os import path as _p
 
-MIRADOR_API_KEY = _genv('MIRADOR_API_KEY', 'demo69')
+MIRADOR_API_KEY = _genv('MIRADOR_API_KEY', 'your_api_key')
 __all__ = (
     'TestMiradorClient'
 )
@@ -94,26 +94,36 @@ class TestMiradorClient(unittest.TestCase):
 
     def test_chunked_urls(self):
 
-        TLEN = 20
+        TLEN = 10
 
-        nsfw_images = ['http://demo.mirador.im/test/nsfw.jpg'] * TLEN
-        sfw_images = ['http://demo.mirador.im/test/sfw.jpg'] * TLEN
+        nsfw_url = 'http://demo.mirador.im/test/nsfw.jpg'
+        sfw_url = 'http://demo.mirador.im/test/sfw.jpg'
 
-        results = self.client.classify_urls(*nsfw_images)
+        # generate our tests
+        nsfw_images = {}
+        for i in xrange(TLEN):
+            nsfw_images["{}_{}".format(i, nsfw_url)] = nsfw_url
+
+        sfw_images = {}
+        for i in xrange(TLEN):
+            sfw_images["{}_{}".format(i, sfw_url)] = sfw_url
+
+        results = self.client.classify_urls(nsfw_images)
         self.assertEqual(len(results), TLEN)
 
-        for r in results:
-            self.assertEqual(r.name, 'http://demo.mirador.im/test/nsfw.jpg')
-            self.assertGreaterEqual(r.value, 0.50)
-            self.assertEqual(r.safe, False)
+        for id, res in results.items():
+            self.assertTrue((id in nsfw_images))
+            self.assertGreaterEqual(res.value, 0.50)
+            self.assertEqual(res.safe, False)
 
-        results = self.client.classify_urls(*sfw_images)
+        # get the sfw ones
+        results = self.client.classify_urls(sfw_images)
         self.assertEqual(len(results), TLEN)
 
-        for r in results:
-            self.assertEqual(r.name, 'http://demo.mirador.im/test/sfw.jpg')
-            self.assertLess(r.value, 0.50)
-            self.assertEqual(r.safe, True)
+        for id, res in results.items():
+            self.assertTrue(id in sfw_images)
+            self.assertLessEqual(res.value, 0.50)
+            self.assertEqual(res.safe, True)
 
 
 def suite():
@@ -121,4 +131,7 @@ def suite():
     return suite
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.WARN)
+
     unittest.main()

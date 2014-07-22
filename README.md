@@ -11,58 +11,53 @@ pip install mirador
 
 ## Getting started: command-line tool
 
-For command-line use, the package installs a script called `mirador-client` that will be added to your path. For usage please enter `mirador-client -h`, basic usage is:
+There's a command-line tool included in, which should show up as `mirador-client` in your `PATH`. It takes in a file(s) of ids and urls and outputs html showing the result:
 
 ```shell
-$ mirador-client -k YOUR_API_KEY images/*.{jpg,png}`
+echo "baby-1  http://demo.mirador.im/test/baby.jpg" > test.urls
+mirador-client -k your_api_key test.urls > test.html
+open test.html
 ```
-
-In this example, we are classifying all of the images in the `images` directory on your computer. URLs can be specified on the command line, although be careful to escape them in quotes (so that characters aren't interpreted by your shell)
-
 
 ## Mirador python module
 
 The python module has a simple interface in `mirador.MiradorClient`, documented here.
 
-
 ### `mirador.MiradorClient(api_key)`
 
 The client supports classification of either images or files, where files can be filenames or file-objects.
 
-#### `MiradorClient.classify_files(*files) -> [MiradorResult]`
+### `MiradorClient#classify_files(files) => MiradorResultList<MiradorResult>`
 
-Example code:
+Here, files can be a list of filenames or file objects, or a dict of `{ id: filename/filehandle }`, if you want to have a different `MiradorResult.id` on the results than the filename itself.
 
-```python
-from mirador import MiradorClient
+### `MiradorClient#classify_urls(urls) => MiradorResultList<MiradorResult>`
 
-mc = MiradorClient('your_key_here')
-fh = open('pic3.jpg', 'rb')
+Same as with files, you can either pass a list and use the urls as ids, or pass a dict and specify your own ids.
 
-for res in mc.classify_files('pic1.jpg', 'pic2.jpg', fh):
-    print "{name}, {safe}, {value}".format(**res.__dict__)
-```
+### `MiradorClient#classify_raw(buffers) => MiradorResultList<MiradorResult>`
 
-Here you can see that the `MiradorResult` object has 3 fields:
-
-* `MiradorResult.name` - the url or filename used in the request
-* `MiradorResult.safe` - (boolean) indicated if image is 'flagged' by API
-* `MiradorResult.value` - (float) value 0.0 - 1.0 indicated confidence of decision
-
-#### `MiradorResult.classify_urls(*urls) -> [MiradorResult]`
-
-This has an indentical inteface to `classify_files`, except it expects http/https urls.
-
-```python
-from mirador import MiradorClient
-
-mc = MiradorClient('your_key_here')
-
-for res in mc.classify_files('http://example.com/pic2.jpg', 'http://example.com/pic3.jpg'):
-    print "{name}, {safe}, {value}".format(**res.__dict__)
-```
+Here you need to pass a dict `{ id: buffer }`, so you can identify the results later.
 
 
-## Extensions & Integrations
+## `mirador.MiradorResultList`
 
-We are in the process of providing extensions and integrations into common frameworks. This package contains an experimental django integration. It is highly advised against use right now, although the code is located in [ext/django.py](mirador/ext/django.py), if you want to take a look.
+The result list allows for dict-access of the results and some better extended-dict functionality, also provides more backwards-compatibility to earlier versions of the API.
+
+Basic methods:
+
+### `MiradorResultList#__getitem__(request_id)`
+
+You can get responses by the id you assigned when you called classify
+
+### `MiradorResultList#__iter__`
+
+Provides a list-like iterator on the actual `MiradorResult` objects
+
+## `mirador.MiradorResult`
+
+This has the following properties (it's pretty simple):
+
+* `id` - (String) the id you passed in or the assumed value
+* `value` - (float) the rating given by the API (0 = totally safe, 1.0 = totally unsafe)
+* `safe` - (boolean) true = is safe, false = unsafe (NSFW/pornographic)

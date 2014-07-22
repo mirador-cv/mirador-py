@@ -2,3 +2,5 @@ Mirador.egg-info
 *.pyc
 dist
 MANIFEST
+test.urls
+test.html

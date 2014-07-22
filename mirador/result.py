@@ -4,6 +4,44 @@
 
 """
 from errors import http_exceptions, MiradorException
+import sys
+
+
+class MiradorResultList(object):
+
+    def __init__(self, items=[]):
+        self._items = {}
+
+    def _add(self, items=[]):
+        for x in items:
+            self._items[x.id] = x
+
+    def concat(self, more=[]):
+        self._add(more)
+
+    def __getitem__(self, n):
+
+        if n in self._items:
+            return self._items[n]
+
+        return None
+
+    def __iter__(self):
+        sys.stderr.write(
+            """
+            [DeprecationWarning]
+            Classification methods will by default return
+            a dict in favor of a list
+            """
+        )
+
+        return self._items.values().__iter__()
+
+    def __len__(self):
+        return len(self._items)
+
+    def items(self):
+        return self._items.items()
 
 
 class MiradorResult(object):
@@ -15,7 +53,7 @@ class MiradorResult(object):
 
     FMT_STR = "<MiradorResult: {name}; safe: {safe}; value: {value}/>"
 
-    def __init__(self, name, raw={}):
+    def __init__(self, raw={}):
 
         if 'result' not in raw:
             raise http_exceptions[500]("bad result: {}".format(raw))
@@ -29,21 +67,39 @@ class MiradorResult(object):
 
             raise http_exceptions[500]("bad result: {}".format(raw))
 
-        self.name = name
+        self.id = raw.get('id', raw.get('url', None))
         self.safe = res['safe']
         self.value = res['value']
 
+    @property
+    def name(self):
+        sys.stderr.write(
+            """[DeprecationWarning]:
+            MiradorResult.name has been depricated in favor of @id
+            """
+        )
+        return self.id
+
+    @name.setter
+    def name(self, value=None):
+        sys.stderr.write(
+            """[DeprecationWarning]:
+            MiradorResult.name has been depricated in favor of @id
+            """
+        )
+        self.id = value
+
     @staticmethod
-    def parse_results(reqs, results):
+    def parse_results(results):
         """ parse JSON output of API into MiradorResult objects """
 
         if not results:
-            raise http_exceptions[500]("no result available: {}".format(reqs))
+            raise http_exceptions[500](
+                "no result available: {}"
+                .format(results)
+            )
 
-        return [
-            MiradorResult(n, r)
-            for n, r in zip(reqs, results)
-        ]
+        return [MiradorResult(r) for r in results]
 
     @staticmethod
     def parse_results_safe(reqs, results):

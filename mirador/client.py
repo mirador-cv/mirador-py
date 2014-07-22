@@ -7,9 +7,48 @@ from __future__ import absolute_import
 
 import base64
 import requests
-from requests import exceptions as req_exp
+import logging
+from functools import wraps
 from .errors import http_exceptions, MiradorException
-from .result import MiradorResult
+from .result import MiradorResult, MiradorResultList
+
+
+def classification_method(name=None):
+    """decorator that provides a consistent interface"""
+
+    def classification_wrap(fn):
+
+        @wraps(fn)
+        def classification_wrapper(self, *args, **mapped_items):
+            """Accepts arguments to classify in 3 forms:
+                items<dict> - mapped items as dict
+                items<list> - unmapped (int-keys)
+                **mapped_items - mapped items
+            """
+
+            # items will always end up as a dict
+            items = MiradorClient._classification_input(
+                fn, args, mapped_items
+            )
+
+            # get the payload, using the provided fn
+            payloads = self._prepare_payload(fn, items, name)
+
+            if not payloads:
+                self._log.error(
+                    "invalid request: {}".format(items)
+                )
+                raise MiradorException(
+                    "invalid request data: {}".format(items)
+                )
+
+            output = MiradorResultList()
+            for load in payloads:
+                output.concat(self._request(load))
+            return output
+
+        return classification_wrapper
+    return classification_wrap
 
 
 class MiradorClient(object):
@@ -25,6 +64,8 @@ class MiradorClient(object):
         'User-Agent': 'MiradorClient/1.0 Python'
     }
 
+    # 30 seconds; long but w/e
+    TIMEOUT = 30.0
     MAX_LEN = 2
 
     def __init__(self, api_key, timeout=10):
@@ -36,68 +77,77 @@ class MiradorClient(object):
         Returns:
             A MiradorClient instance
         """
-
+        self._log = logging.getLogger(__name__)
         self._api_key = api_key
-        self._url = "{0}{1}".format(
-            self.API_BASE, self.CLASSIFY_ENDPOINT
+
+        self._log.info(
+            "instantiating MiradorClient with key: {}"
+            .format(self._api_key)
         )
 
-    def _params(self, data, method):
-        """prepare paramters for the request"""
+    def _request(self, payload):
+        """Send a request to the API and parse output"""
 
-        key = 'data' if method == 'post' else 'params'
-        data['api_key'] = self._api_key
-
-        return {
-            'headers': self.HEADERS,
-
-            # data is of the appropraite key
-            key: data,
-
-            # set the timeout to a factor of the # pix
-            'timeout': self._timeout(len(data))
-        }
-
-    def _timeout(self, num_pix):
-        return (float(num_pix) * 2.75)
-
-    def _prepare_request(self, **data):
-        """prepare the options & parameters of request"""
-
-        if not data or ('image' not in data and 'url' not in data):
-            raise http_exceptions[400]("url(s) or image(s) required")
-
-        # assign the correct method based on type
-        method = 'get' if not 'image' in data else 'post'
-        params = self._params(data, method)
-
-        return method, params
-
-    def _request(self, **data):
-        """make the request via requests module"""
-
-        method, params = self._prepare_request(**data)
+        # put the api_key into the request
+        payload['api_key'] = self._api_key
 
         try:
-            r = getattr(requests, method)(self._url, **params)
-        except req_exp.ConnectionError:
-            raise MiradorException(
-                "could not connect to server: check your network connection",
-                400
-            )
-        except req_exp.HTTPError:
-            raise http_exceptions[
-                (r.status_code if r else 500)
-            ]("unexpected error")
-        except req_exp.Timeout:
-            raise http_exceptions[500](
-                "Timeout occurred. Try again with fewer request objects"
+
+            self._log.info(
+                "making content moderation request"
             )
 
-        if r.status_code != 200:
-            raise http_exceptions[r.status_code](r.text)
+            self._log.debug(
+                "mirador api request: {}".format(payload)
+            )
 
-        return r.json() if r.text else {}
+            r = requests.post(
+                self.API_BASE + self.CLASSIFY_ENDPOINT,
+                data=payload,
+                headers=self.HEADERS,
+                timeout=self.TIMEOUT,
+            )
+
+            if r.status_code != 200:
+
+                self._log.error(
+                    "error from mirador server: {}, {}"
+                    .format(r.text, r)
+                )
+
+                raise http_exceptions[200](r.text)
+
+            result = r.json()
+
+            if not result or 'results' not in result:
+
+                self._log.error(
+                    "bad output form API: {}"
+                    .format(r.text)
+                )
+
+                raise http_exceptions[500](
+                    (result.get('errors', 'Error')
+                     if result else 'Unexpected Error')
+                )
+
+            # parse the results
+            self._log.info("parsing response from Mirador API")
+            return self._parse_response(result['results'])
+
+        except Exception as e:
+            self._log.error(
+                "unexpected error in Mirador API: {}"
+                .format(e)
+            )
+            raise http_exceptions[500]("{}".format(e))
+
+    def _parse_response(self, output):
+        return MiradorResult.parse_results(output)
+
+    #
+    # image processing helper functions
+    #
 
     def _read_image(self, image):
         """read an image if it's a file and return the name"""
@@ -115,87 +165,103 @@ class MiradorClient(object):
 
         if not data:
             raise http_exceptions[400]("no image data for: {}".format(name))
-        return name, base64.b64encode(data)
 
-    def _chunk_and_flatten(self, fn, L):
-        res = [
-            fn(*L[i:i + self.MAX_LEN])
-            for i in xrange(0, len(L), self.MAX_LEN)
-        ]
+        return base64.b64encode(data)
 
-        # flatten the results
-        return [x for sl in res for x in sl]
+    def _param_key(self, name, idx):
+        base_key = "{name}[{idx}]".format(**locals())
+        return base_key + '[id]', base_key + '[data]'
 
-    def classify_urls(self, *urls):
-        """classifies url(s) via the API
+    #
+    # public interface for classifying files, urls, etc
+    #
 
-        Args:
-            *urls: urls to classify. Must be publically accessible
-        Returns:
-            a list of MiradorResult objects, each with three properties:
-                name: a string representing the source url
-                safe: boolean - is the image safe (unflagged)
-                value: float representing confidence in flag result
-        """
+    @staticmethod
+    def _classification_input(fn, args, mapped_items):
+        """take different input possibilities and return a dict"""
 
-        if not urls:
-            return []
+        if args:
 
-        if len(urls) > self.MAX_LEN:
-            return self._chunk_and_flatten(self.classify_urls, urls)
+            if isinstance(args[0], dict):
+                return args[0]
+            elif isinstance(args[0], (list, tuple)):
+                return dict(
+                    [(idx, el) for idx, el in enumerate(args[0])]
+                )
+            elif isinstance(args[0], basestring) or hasattr(args[0], 'read'):
 
-        if isinstance(urls[0], (list, tuple)):
-            urls = urls[0]
+                # may be either a filename or a file-object
+                items = {}
+                for ex in args:
 
-        res = self._request(url=urls)
+                    if isinstance(ex, basestring):
+                        items[ex] = ex
+                    elif hasattr(ex, 'read') and hasattr(ex, 'name'):
+                        items[ex.name] = ex
+                    else:
+                        raise MiradorException(
+                            "{} execpts dict, list, string, or fh: {} provided"
+                            .format(fn.__name__, type(ex))
+                        )
+                return items
+            else:
+                raise MiradorException(
+                    "{} takes only dict, fh, list, or string(s); {} provided"
+                    .format(fn.__name__, type(args[0]))
+                )
 
-        return MiradorResult.parse_results(
-            urls, res.get('results', None)
-        )
+        elif mapped_items:
+            return mapped_items
 
-    def classify_raw(self, buffers):
-        """Classify raw strings representing the files
-        Args:
-            buffers: {filenames => strings} of raw image data
-        Returns:
-            lit of MiradorResult objects
-        """
-        if not buffers:
-            return []
-
-        res = self._request(
-            image=map(
-                lambda b: base64.b64encode(b).replace("\n", ''),
-                buffers.values()
+        else:
+            raise MiradorException(
+                "bad input to {}: {}"
+                .format(fn.__name__, mapped_items)
             )
-        )
 
-        return MiradorResult.parse_results(
-            buffers.keys(), res.get('results', None)
-        )
+    def _prepare_payload(self, fn, items, name):
 
-    def classify_files(self, *files):
-        """classifies file(s) via the API
-        Args:
-            *files: filenames or file objects
-        Returns:
-            a list of MiradorResult objects, each with three properties:
-                name: a string representing the source filename
-                safe: boolean - is the image safe (unflagged)
-                value: float representing confidence in flag result
-        """
-        if not files:
-            return []
+        idx = 0
 
-        if isinstance(files[0], (list, tuple)):
-            files = files[0]
+        payloads = []
+        curr = {}
 
-        filedata = map(self._prepare_image, files)
+        for id, data in items.items():
 
-        res = self._request(
-            image=map(lambda x: x[1], filedata)
-        )
+            if ((idx + 1) % self.MAX_LEN) == 0 and len(curr) > 1:
+                payloads.append(curr)
+                curr = {}
+                idx = 0
 
-        return MiradorResult.parse_results(
-            map(lambda x: x[0], filedata), res.get('results', None)
-        )
+            pk, pvk = self._param_key(name, idx)
+
+            curr[pk] = id
+            curr[pvk] = fn(self, data)
+
+            idx += 1
+
+        # finish; append last one
+        if len(curr) > 1:
+            payloads.append(curr)
+
+        return payloads
+
+    #
+    # public @classification_method methods
+    #
+
+    @classification_method(name='image')
+    def classify_files(self, file):
+        return self._prepare_image(file)
+
+    @classification_method(name='url')
+    def classify_urls(self, url):
+        return url
+
+    @classification_method(name='image')
+    def classify_buffers(self, image_buffer):
+        return base64.b64encode(image_buffer).replace("\n", '')
+
+    @classification_method(name='image')
+    def classify_raw(self, image_buffer):
+        return base64.b64encode(image_buffer).replace("\n", '')
