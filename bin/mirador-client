@@ -76,6 +76,8 @@ def result_tpl(res, url):
     """.format(**d)
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.WARN)
 
     parser = OptionParser(
         usage="""
@@ -103,7 +105,13 @@ print HTML to stdout (redirect it?)
     sys.stderr.write("\b" * (61))
 
     for idx, line in enumerate(fileinput.input(args)):
-        print process_line(mc, line)
+
+        try:
+            print process_line(mc, line)
+        except Exception as e:
+            sys.exit(
+                "unexpected error: {} on line {}".format(e, line)
+            )
 
         if not idx % 2:
             sys.stderr.write('-')

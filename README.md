@@ -1,5 +1,5 @@
 # Mirador-Py
-A python client for the Mirador [Image Moderation API](http://mirador.im). To get started, you will need an API Key, available at [mirador.im/join](http://mirador.im/join). For questions about keys or support with this module please email support@mirador.im.
+A python client for the Mirador [Image Moderation API](http://mirador.im). To get started, you will need an API Key, available at [mirador.im](http://mirador.im). For questions about keys or support with this module please email support@mirador.im.
 
 ## Installation
 

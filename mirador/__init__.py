@@ -2,11 +2,16 @@
 # @author nickjacob (nick@mirador.im)
 from client import MiradorClient
 from errors import MiradorException
+from result import MiradorResult, MiradorResultList
 from os import getenv as _genv
 
 import client
 import ext
+import logging
 
+# a null logging handler
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 def classify_files(files, api_key=None):
     "procedural: classify files given the `api_key`"
