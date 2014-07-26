@@ -1,4 +1,5 @@
-# Mirador-Py
+# Mirador-Py [![Build Status](https://drone.io/github.com/mirador-cv/mirador-py/status.png)](https://drone.io/github.com/mirador-cv/mirador-py/latest)
+
 A python client for the Mirador [Image Moderation API](http://mirador.im). To get started, you will need an API Key, available at [mirador.im](http://mirador.im). For questions about keys or support with this module please email support@mirador.im.
 
 ## Installation
