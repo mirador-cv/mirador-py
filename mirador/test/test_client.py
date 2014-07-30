@@ -19,13 +19,17 @@ class TestMiradorClient(unittest.TestCase):
     def test_classify_urls(self):
         "check that classification works both on server & client"
 
+        # our testing urls
+        nsfw_url = 'http://demo.mirador.im/test/nsfw.jpg'
+        sfw_url = 'http://demo.mirador.im/test/sfw.jpg'
+
         results = self.client.classify_urls(
-            'http://demo.mirador.im/test/nsfw.jpg',
-            'http://demo.mirador.im/test/sfw.jpg'
+            nsfw_url,
+            sfw_url
         )
 
         self.assertEqual(len(results), 2)
-        nsfw, sfw = results
+        nsfw, sfw = results[nsfw_url], results[sfw_url]
 
         # check that the filenames were matched correctly
         self.assertEqual(nsfw.name, 'http://demo.mirador.im/test/nsfw.jpg')
@@ -52,7 +56,7 @@ class TestMiradorClient(unittest.TestCase):
             nsfw_filename, test_file)
 
         self.assertEqual(len(results), 2)
-        nsfw, sfw = results
+        nsfw, sfw = results[nsfw_filename], results[sfw_filename]
 
         self.assertEqual(nsfw.name, nsfw_filename)
         self.assertEqual(sfw.name, sfw_filename)
@@ -81,7 +85,7 @@ class TestMiradorClient(unittest.TestCase):
                 'images/sfw.jpg': sfw_raw
             })
 
-        nsfw, sfw = results
+        nsfw, sfw = results['images/nsfw.jpg'], results['images/sfw.jpg']
 
         self.assertEqual(nsfw.name, 'images/nsfw.jpg')
         self.assertEqual(sfw.name, 'images/sfw.jpg')
