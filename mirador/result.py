@@ -27,15 +27,12 @@ class MiradorResultList(object):
         return None
 
     def __iter__(self):
-        sys.stderr.write(
-            """
-            [DeprecationWarning]
-            Classification methods will by default return
-            a dict in favor of a list
-            """
-        )
+        sys.stderr.write("""
+[DeprecationWarning]
+Classification methods not return a dict indexed by id
+""")
 
-        return self._items.values().__iter__()
+        return self._items.__iter__()
 
     def __len__(self):
         return len(self._items)
@@ -51,7 +48,7 @@ class MiradorResult(object):
         value - a float 0.0-1.0; confidence of result
     """
 
-    FMT_STR = "<MiradorResult: {name}; safe: {safe}; value: {value}/>"
+    FMT_STR = "<MiradorResult: {id}; safe: {safe}; value: {value}/>"
 
     def __init__(self, raw={}):
 
