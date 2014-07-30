@@ -24,38 +24,88 @@ open test.html
 
 The python module has a simple interface in `mirador.MiradorClient`, documented here.
 
-### `mirador.MiradorClient(api_key)`
+#### `mirador.MiradorClient(api_key)`
 
 The client supports classification of either images or files, where files can be filenames or file-objects.
 
-### `MiradorClient#classify_files(files) => MiradorResultList<MiradorResult>`
+#### `MiradorClient#classify_files(files) => MiradorResultList<MiradorResult>`
 
 Here, files can be a list of filenames or file objects, or a dict of `{ id: filename/filehandle }`, if you want to have a different `MiradorResult.id` on the results than the filename itself.
 
-### `MiradorClient#classify_urls(urls) => MiradorResultList<MiradorResult>`
+```python
+>>> results = MiradorClient('your_api_key').classify_files('my-image1.jpg', open('my-image-2.jpg', 'r'))
+>>> 'my-image-1.jpg' in results
+True
+>>> 'my-image-2.jpg' in results
+>>> True
+```
+
+#### `MiradorClient#classify_urls(urls) => MiradorResultList<MiradorResult>`
 
 Same as with files, you can either pass a list and use the urls as ids, or pass a dict and specify your own ids.
 
-### `MiradorClient#classify_raw(buffers) => MiradorResultList<MiradorResult>`
+```python
+>>> results = MiradorClient('your_api_key').classify_urls('http://demo.mirador.im/test/baby.jpg')
+>>> 'http://demo.mirador.im/test/baby.jpg' in results
+True
+>>> results = MiradorClient('your_api_key').classify_urls({ 'my-id': 'http://demo.mirador.im/test/baby.jpg'})
+>>> 'my-id' in results
+True
+```
+
+
+#### `MiradorClient#classify_buffers(buffers) => MiradorResultList<MiradorResult>`
 
 Here you need to pass a dict `{ id: buffer }`, so you can identify the results later.
+
+```python
+
+>>> results = MiradorClient('your_api_key').classify_buffers({ 'image-1': open('myimage.jpg', 'r').read() })
+>>> 'image-1' in results
+True
+>>> results['image-1'].value
+0.33234
+
+```
 
 
 ## `mirador.MiradorResultList`
 
 The result list allows for dict-access of the results and some better extended-dict functionality, also provides more backwards-compatibility to earlier versions of the API.
 
+```python
+results = MiradorClient('your_api_key').classify_urls('http://demo.mirador.im/test/nsfw.jpg')
+
+for id, result in results:
+    print "{id} -> {safe}, {value}".format(id=id, safe=result.safe, value=result.value)
+
+
+>>> 'http://demo.mirador.im/test/nsfw.jpg' in results
+True
+```
+
+if you specify and id:
+
+```python
+
+>>> results = MiradorClient('your_api_key').classify_urls({ 'image-1': 'http://demo.mirador.im/test/sfw.jpg' })
+>>> 'image-1' in results
+True
+
+```
+
+
 Basic methods:
 
-### `MiradorResultList#__getitem__(request_id)`
+#### `MiradorResultList#__getitem__(request_id)`
 
 You can get responses by the id you assigned when you called classify
 
-### `MiradorResultList#__iter__`
+#### `MiradorResultList#__iter__`
 
 Provides a list-like iterator on the actual `MiradorResult` objects
 
-## `mirador.MiradorResult`
+### `mirador.MiradorResult`
 
 This has the following properties (it's pretty simple):
 
