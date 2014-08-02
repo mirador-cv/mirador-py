@@ -115,7 +115,7 @@ class TestMiradorClient(unittest.TestCase):
         results = self.client.classify_urls(nsfw_images)
         self.assertEqual(len(results), TLEN)
 
-        for id, res in results.items():
+        for id, res in results:
             self.assertTrue((id in nsfw_images))
             self.assertGreaterEqual(res.value, 0.50)
             self.assertEqual(res.safe, False)
@@ -124,7 +124,7 @@ class TestMiradorClient(unittest.TestCase):
         results = self.client.classify_urls(sfw_images)
         self.assertEqual(len(results), TLEN)
 
-        for id, res in results.items():
+        for id, res in results:
             self.assertTrue(id in sfw_images)
             self.assertLessEqual(res.value, 0.50)
             self.assertEqual(res.safe, True)

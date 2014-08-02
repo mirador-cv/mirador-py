@@ -31,8 +31,8 @@ class MiradorResultList(object):
 [DeprecationWarning]
 Classification methods not return a dict indexed by id
 """)
-
-        return self._items.__iter__()
+        for k, v in self._items.items():
+            yield k, v
 
     def __len__(self):
         return len(self._items)
