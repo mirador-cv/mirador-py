@@ -13,12 +13,7 @@ def moderate():
     if not image or not image.stream:
         return abort(400)
 
-    results = mc.classify_files(image)
-
-    if 'image' not in results:
-        return abort(500)
-
-    res = results['image']
+    res = mc.classify_file(image)
     safe_str = 'Safe' if res.safe else 'Unsafe'
 
     return """
