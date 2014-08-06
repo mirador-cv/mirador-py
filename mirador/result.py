@@ -5,6 +5,7 @@
 """
 from errors import http_exceptions, MiradorException
 import sys
+import json
 
 
 class MiradorResultList(object):
@@ -70,20 +71,18 @@ class MiradorResult(object):
 
     @property
     def name(self):
-        sys.stderr.write(
-            """[DeprecationWarning]:
-            MiradorResult.name has been depricated in favor of @id
-            """
-        )
+        sys.stderr.write("""
+[DeprecationWarning]:
+MiradorResult.name has been depricated in favor of @id
+""")
         return self.id
 
     @name.setter
     def name(self, value=None):
-        sys.stderr.write(
-            """[DeprecationWarning]:
-            MiradorResult.name has been depricated in favor of @id
-            """
-        )
+        sys.stderr.write("""
+[DeprecationWarning]:
+MiradorResult.name has been depricated in favor of @id
+""")
         self.id = value
 
     @staticmethod
@@ -117,3 +116,10 @@ class MiradorResult(object):
 
     def __str__(self):
         return self.FMT_STR.format(**self.__dict__)
+
+    def to_json(self):
+        return json.dumps({
+            'id': self.id,
+            'value': self.value,
+            'safe': self.safe
+        })

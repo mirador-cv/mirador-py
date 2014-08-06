@@ -1,7 +1,9 @@
 import unittest
 from mirador.client import MiradorClient
+from mirador.errors import MiradorException, UnauthorizedException
 from os import getenv as _genv
 from os import path as _p
+from base64 import b64encode as b64
 
 MIRADOR_API_KEY = _genv('MIRADOR_API_KEY', 'your_api_key')
 __all__ = (
@@ -15,6 +17,65 @@ class TestMiradorClient(unittest.TestCase):
         self.client = MiradorClient(
             MIRADOR_API_KEY
         )
+
+        dirname = _p.dirname(__file__)
+
+        self.nsfw_filename = _p.join(dirname, 'images/nsfw.jpg')
+        self.sfw_filename = _p.join(dirname, 'images/sfw.jpg')
+
+
+    def test_invalid_apikey(self):
+
+        with self.assertRaises(UnauthorizedException):
+            c = MiradorClient('invalid-key')
+            c.classify_urls('http://static.mirador.im/test/nsfw.jpg')
+
+    def test_bad_request(self):
+
+        with self.assertRaises(MiradorException):
+            self.client.classify_urls('http://torg.torf')
+
+    def test_single_url(self):
+
+        nsfw = self.client.classify_url(
+            'http://static.mirador.im/test/nsfw.jpg'
+        )
+
+        self.assertIsNotNone(nsfw)
+        self.assertGreaterEqual(nsfw.value, 0.50)
+        self.assertFalse(nsfw.safe)
+
+    def test_single_file(self):
+
+        nsfw = self.client.classify_file(
+            self.nsfw_filename
+        )
+
+        self.assertIsNotNone(nsfw)
+        self.assertGreaterEqual(nsfw.value, 0.50)
+        self.assertFalse(nsfw.safe)
+
+    def test_single_buffer(self):
+
+        with open(self.nsfw_filename) as nsfw_f:
+            nsfw_buf = nsfw_f.read()
+
+            nsfw = self.client.classify_buffer({"nsfw": nsfw_buf})
+            self.assertIsNotNone(nsfw)
+            self.assertGreaterEqual(nsfw.value, 0.50)
+            self.assertFalse(nsfw.safe)
+
+    def test_single_datauri(self):
+
+        with open(self.nsfw_filename) as nsfw_f:
+            nsfw_buf = nsfw_f.read()
+            data_nsfw = 'data:image/jpg;base64,' + b64(nsfw_buf)
+
+            nsfw = self.client.classify_data_uri({"nsfw": data_nsfw})
+
+            self.assertIsNotNone(nsfw)
+            self.assertGreaterEqual(nsfw.value, 0.50)
+            self.assertFalse(nsfw.safe)
 
     def test_classify_urls(self):
         "check that classification works both on server & client"

@@ -34,6 +34,15 @@ class UnauthorizedException(MiradorException):
         )
 
 
+class TimeoutException(MiradorException):
+    code = 408
+
+    def __init__(self, *args, **kwargs):
+        super(TimeoutException, self).__init__(
+            "Timeout occurred in request. Adjust MiradorClient.TIMEOUT or try request again"
+        )
+
+
 def default_exception():
     return MiradorException
 
@@ -41,4 +50,5 @@ def default_exception():
 http_exceptions = defaultdict(default_exception)
 http_exceptions[400] = InvalidRequestException
 http_exceptions[403] = UnauthorizedException
+http_exceptions[408] = TimeoutException
 http_exceptions[500] = MiradorException

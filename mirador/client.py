@@ -8,12 +8,34 @@ from __future__ import absolute_import
 import base64
 import requests
 import logging
+import re
 from functools import wraps
+from requests.exceptions import HTTPError, Timeout, RequestException
 from .errors import http_exceptions, MiradorException
 from .result import MiradorResult, MiradorResultList
 
 
-def classification_method(name=None):
+def classification_single(fn):
+
+    fn_multiple = fn.__name__ + 's'
+
+    def classification_inner_single(self, *args, **kwargs):
+        fn_mul = getattr(self, fn_multiple, None)
+
+        if not fn_mul:
+            self._log.error(
+                "could not call classification multiple: {}"
+                .format(fn_multiple)
+            )
+            return None
+
+        results = fn_mul(*args, **kwargs)
+        return results._items.values()[0]
+
+    return classification_inner_single
+
+
+def classification_method(name=None, klass=None):
     """decorator that provides a consistent interface"""
 
     def classification_wrap(fn):
@@ -64,9 +86,13 @@ class MiradorClient(object):
         'User-Agent': 'MiradorClient/1.0 Python'
     }
 
+    DATA_URI_RXP = re.compile(r'^.+;base64,')
+
     # 30 seconds; long but w/e
     TIMEOUT = 30.0
+
     MAX_LEN = 2
+    MAX_ID_LEN = 256
 
     def __init__(self, api_key, timeout=10):
         """Instaniate a MiradorClient
@@ -115,7 +141,7 @@ class MiradorClient(object):
                     .format(r.text, r)
                 )
 
-                raise http_exceptions[200](r.text)
+                raise http_exceptions[r.status_code](r.text)
 
             result = r.json()
 
@@ -135,12 +161,32 @@ class MiradorClient(object):
             self._log.info("parsing response from Mirador API")
             return self._parse_response(result['results'])
 
-        except Exception as e:
+        except HTTPError as hte:
+
             self._log.error(
-                "unexpected error in Mirador API: {}"
-                .format(e)
+                "HTTPError encountered in reuqest: {}"
+                .format(hte)
             )
-            raise http_exceptions[500]("{}".format(e))
+
+            if hte.response and hte.response.status_code:
+                raise http_exceptions[
+                    hte.response.status_code
+                ]("{}".format(hte))
+            else:
+                raise http_exceptions[500]("{}".format(hte))
+
+        except Timeout as te:
+            self._log.error(
+                "encountered timeout in request: {}"
+                .format(te)
+            )
+
+            raise http_exceptions[408]("{}".format(te))
+
+        except RequestException as re:
+            self._log.error(
+                "unexpected error in request: {}".format(re))
+            raise MiradorException(str(re))
 
     def _parse_response(self, output):
         return MiradorResult.parse_results(output)
@@ -177,38 +223,47 @@ class MiradorClient(object):
     #
 
     @staticmethod
+    def _dict_process(d):
+
+        if 'id' in d and 'data' in d:
+            return {d['id']: d['data']}
+        else:
+            return d
+
+    @staticmethod
+    def _list_process(args):
+        """given an array of arguments, return a correctly-formatted dict"""
+
+        items = {}
+        for idx, ex in enumerate(args):
+
+            if isinstance(ex, basestring):
+                items[ex if len(ex) < MiradorClient.MAX_ID_LEN else idx] = ex
+
+            # if it's a file-like object
+            elif hasattr(ex, 'read') and hasattr(ex, 'name'):
+                items[ex.name] = ex
+
+            elif isinstance(ex, dict):
+                items.update(MiradorClient._dict_process(ex))
+
+            elif isinstance(ex, (list, tuple)):
+                items.update(dict([(i, e) for i, e in enumerate(ex)]))
+
+            else:
+                raise MiradorException(
+                    "invalid argument: {}. List, string, or fh expected"
+                    .format(type(ex))
+                )
+
+        return items
+
+    @staticmethod
     def _classification_input(fn, args, mapped_items):
         """take different input possibilities and return a dict"""
 
         if args:
-
-            if isinstance(args[0], dict):
-                return args[0]
-            elif isinstance(args[0], (list, tuple)):
-                return dict(
-                    [(idx, el) for idx, el in enumerate(args[0])]
-                )
-            elif isinstance(args[0], basestring) or hasattr(args[0], 'read'):
-
-                # may be either a filename or a file-object
-                items = {}
-                for ex in args:
-
-                    if isinstance(ex, basestring):
-                        items[ex] = ex
-                    elif hasattr(ex, 'read') and hasattr(ex, 'name'):
-                        items[ex.name] = ex
-                    else:
-                        raise MiradorException(
-                            "{} execpts dict, list, string, or fh: {} provided"
-                            .format(fn.__name__, type(ex))
-                        )
-                return items
-            else:
-                raise MiradorException(
-                    "{} takes only dict, fh, list, or string(s); {} provided"
-                    .format(fn.__name__, type(args[0]))
-                )
+            return MiradorClient._list_process(args)
 
         elif mapped_items:
             return mapped_items
@@ -265,3 +320,29 @@ class MiradorClient(object):
     @classification_method(name='image')
     def classify_raw(self, image_buffer):
         return base64.b64encode(image_buffer).replace("\n", '')
+
+    @classification_method(name='image')
+    def classify_data_uris(self, image_buffer):
+        return self.DATA_URI_RXP.sub(
+            '', image_buffer
+        ).replace('\n', '')
+
+    @classification_single
+    def classify_file():
+        pass
+
+    @classification_single
+    def classify_url():
+        pass
+
+    @classification_single
+    def classify_buffer():
+        pass
+
+    @classification_single
+    def classify_data_uri():
+        pass
+
+    @classification_single
+    def classify_data_raw():
+        pass
