@@ -29,9 +29,10 @@
       </header>
       <section>
         <h1>
-<a name="mirador-py" class="anchor" href="#mirador-py"><span class="octicon octicon-link"></span></a>Mirador-Py</h1>
+<a name="mirador-py-" class="anchor" href="#mirador-py-"><span class="octicon octicon-link"></span></a>Mirador-Py <a href="https://drone.io/github.com/mirador-cv/mirador-py/latest"><img src="https://drone.io/github.com/mirador-cv/mirador-py/status.png" alt="Build Status"></a>
+</h1>
 
-<p>A python client for the Mirador <a href="http://mirador.im">Image Moderation API</a>. To get started, you will need an API Key, available at <a href="http://mirador.im/join">mirador.im/join</a>. For questions about keys or support with this module please email <a href="mailto:support@mirador.im">support@mirador.im</a>.</p>
+<p>A python client for the Mirador <a href="http://mirador.im">Image Moderation API</a>. To get started, you will need an API Key, available at <a href="http://mirador.im">mirador.im</a>. For questions about keys or support with this module please email <a href="mailto:support@mirador.im">support@mirador.im</a>.</p>
 
 <h2>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
@@ -44,66 +45,261 @@
 <h2>
 <a name="getting-started-command-line-tool" class="anchor" href="#getting-started-command-line-tool"><span class="octicon octicon-link"></span></a>Getting started: command-line tool</h2>
 
-<p>For command-line use, the package installs a script called <code>mirador-client</code> that will be added to your path. For usage please enter <code>mirador-client -h</code>, basic usage is:</p>
+<p>There's a command-line tool included in, which should show up as <code>mirador-client</code> in your <code>PATH</code>. It takes in a file(s) of ids and urls and outputs html showing the result:</p>
 
-<pre lang="shell"><code>$ mirador-client -k YOUR_API_KEY images/*.{jpg,png}`
+<pre lang="shell"><code>echo "baby-1  http://demo.mirador.im/test/baby.jpg" &gt; test.urls
+mirador-client -k your_api_key test.urls &gt; test.html
+open test.html
 </code></pre>
 
-<p>In this example, we are classifying all of the images in the <code>images</code> directory on your computer. URLs can be specified on the command line, although be careful to escape them in quotes (so that characters aren't interpreted by your shell)</p>
-
 <h2>
-<a name="mirador-python-module" class="anchor" href="#mirador-python-module"><span class="octicon octicon-link"></span></a>Mirador python module</h2>
+<a name="classifying-files" class="anchor" href="#classifying-files"><span class="octicon octicon-link"></span></a>Classifying Files</h2>
 
-<p>The python module has a simple interface in <code>mirador.MiradorClient</code>, documented here.</p>
+<p>The python client supports working with a number of data types:</p>
+
+<ul>
+<li>file objects (e.g, <code>x</code> where <code>x = open('myfile.png', 'r')</code>) <a href="#classify_files">classify_files</a>
+</li>
+<li>filenames <a href="#classify_files">classify_files</a>
+</li>
+<li>data uris (e.g., data:image/png;base64,eehlk3jr;q3lfhf;eaef==) <a href="#classify_data_uris">classify_data_uris</a>
+</li>
+<li>file buffers (e.g., <code>x</code> where <code>x</code> = open('myfile.png', 'r').read()`) -- useful for form uploads <a href="#classify_buffers">classify_buffers</a>
+</li>
+</ul><p>Every method has an associated single-request method, e.g., <a href="#classify_file">classify_file</a> for classify_files. These have a similar interface but only support processing of one item at a time.</p>
 
 <h3>
-<a name="miradormiradorclientapi_key" class="anchor" href="#miradormiradorclientapi_key"><span class="octicon octicon-link"></span></a><code>mirador.MiradorClient(api_key)</code>
-</h3>
+<a name="-miradormiradorclientclassify_files" class="anchor" href="#-miradormiradorclientclassify_files"><span class="octicon octicon-link"></span></a>
+<a name="classify_files"></a> mirador.MiradorClient#classify_files</h3>
 
-<p>The client supports classification of either images or files, where files can be filenames or file-objects.</p>
+<p>All classification methods share an identical interface that allows for generally flexible input. The mirador API, and the <code>mirador.MiradorResultList</code> object returned by the API allow for the attribution of an arbitrary identifier to your requests, to make post-processing of results easier. However, in cases where you do not specify an ID, the client will choose one (in a way that generally makes sense). For more information on the format of results, please see the documentation on <a href="#result-list">mirador.MiradorResultList</a>.</p>
 
-<h4>
-<a name="miradorclientclassify_filesfiles---miradorresult" class="anchor" href="#miradorclientclassify_filesfiles---miradorresult"><span class="octicon octicon-link"></span></a><code>MiradorClient.classify_files(*files) -&gt; [MiradorResult]</code>
-</h4>
+<p>The simplest way to classify files is by filename:</p>
 
-<p>Example code:</p>
+<div class="highlight highlight-python"><pre><span class="kn">import</span> <span class="nn">mirador</span>
 
-<div class="highlight highlight-python"><pre><span class="kn">from</span> <span class="nn">mirador</span> <span class="kn">import</span> <span class="n">MiradorClient</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">mirador</span><span class="o">.</span><span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_api_key'</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'sfw.jpg'</span><span class="p">)</span>
 
-<span class="n">mc</span> <span class="o">=</span> <span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_key_here'</span><span class="p">)</span>
-<span class="n">fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">'pic3.jpg'</span><span class="p">,</span> <span class="s">'rb'</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">mc</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'pic1.jpg'</span><span class="p">,</span> <span class="s">'pic2.jpg'</span><span class="p">,</span> <span class="n">fh</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">"{name}, {safe}, {value}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">res</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+<span class="c"># since no id was specified, the requests are given the filenames as ids:</span>
+<span class="k">print</span> <span class="n">results</span><span class="p">[</span><span class="s">'nsfw.jpg'</span><span class="p">]</span><span class="o">.</span><span class="n">safe</span> 
+<span class="k">print</span> <span class="n">results</span><span class="p">[</span><span class="s">'sfw.jpg'</span><span class="p">]</span><span class="o">.</span><span class="n">safe</span>
 </pre></div>
 
-<p>Here you can see that the <code>MiradorResult</code> object has 3 fields:</p>
+<p>Alternatively, you can specify an id by passing in a dictionary of id: item mappings, or by using kwargs (as in a <code>dict()</code> constructor):</p>
+
+<div class="highlight highlight-python"><pre><span class="c"># these are equivalent</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">({</span><span class="s">'nsfw'</span><span class="p">:</span> <span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'sfw'</span><span class="p">:</span> <span class="s">'sfw.jpg'</span><span class="p">})</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="n">sfw</span><span class="o">=</span><span class="s">'sfw.jpg'</span><span class="p">)</span>
+</pre></div>
+
+<h4>
+<a name="-using-file-objects" class="anchor" href="#-using-file-objects"><span class="octicon octicon-link"></span></a>
+<a name="using-file-objects"></a> Using File Objects</h4>
+
+<p>You can also pass file or file-like objects (that have a <code>read()</code> method and <code>.name</code> property, e.g., a <code>BytesIO</code>) using either format:</p>
+
+<div class="highlight highlight-python"><pre><span class="c"># the id will be item.name, so in this case, the filenames will be the ids</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">),</span> <span class="nb">open</span><span class="p">(</span><span class="s">'sfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">))</span>
+
+<span class="c"># same request, specifying ids</span>
+<span class="n">results</span><span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">),</span> <span class="n">sfw</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">'sfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">))</span>
+</pre></div>
+
+<p>To pass an already-read file (a buffer), use <a href="#classify_buffers">classify_buffers</a></p>
+
+<h4>
+<a name="-miradormiradorclientclassify_file" class="anchor" href="#-miradormiradorclientclassify_file"><span class="octicon octicon-link"></span></a>
+<a name="classify_file"></a> mirador.MiradorClient#classify_file</h4>
+
+<p>As in the other classification methods, classify_files has a corresponding single-request method, classify_file. This can be used with the same interface as its multiple-request sibling:</p>
+
+<div class="highlight highlight-python"><pre><span class="n">nsfw</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_file</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">nsfw</span><span class="o">.</span><span class="n">id</span> <span class="c"># "nsfw.jpg"</span>
+
+<span class="n">nsfw</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_file</span><span class="p">({</span><span class="s">'nsfw'</span><span class="p">:</span> <span class="s">'nsfw.jpg'</span><span class="p">})</span>
+<span class="k">print</span> <span class="n">nsfw</span><span class="o">.</span><span class="n">id</span> <span class="c"># 'nsfw'</span>
+
+<span class="n">nsfw</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_file</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="s">'nsfw.jpg'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">nsfw</span><span class="o">.</span><span class="n">id</span> <span class="c"># 'nsfw'</span>
+</pre></div>
+
+<h3>
+<a name="-miradormiradorclientclassify_buffers" class="anchor" href="#-miradormiradorclientclassify_buffers"><span class="octicon octicon-link"></span></a>
+<a name="classify_buffers"></a> mirador.MiradorClient#classify_buffers</h3>
+
+<p>This has an identical usage/interface to <a href="#classify_files">classify_files</a>, except that instead of passing in filenames or file objects, you only provide already-read buffers.</p>
+
+<p>When not explicitly specifying an ID, the client uses the index of the item in the parameters, since we can't derive a name from a file buffer:</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">import</span> <span class="nn">mirador</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">mirador</span><span class="o">.</span><span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_api_key'</span><span class="p">)</span>
+
+<span class="n">responses</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_buffers</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="nb">open</span><span class="p">(</span><span class="s">'sfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+<span class="k">print</span> <span class="n">responses</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">safe</span> <span class="c"># False</span>
+<span class="k">print</span> <span class="n">responses</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">safe</span> <span class="c"># True</span>
+</pre></div>
+
+<p>For this reason, when working with buffers, it's best to specify an id (if you can):</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">import</span> <span class="nn">mirador</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">mirador</span><span class="o">.</span><span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_api_key'</span><span class="p">)</span>
+
+<span class="n">responses</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_buffers</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">sfw</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">'sfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+<span class="k">print</span> <span class="n">responses</span><span class="p">[</span><span class="s">'nsfw'</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="c"># 0.99</span>
+<span class="k">print</span> <span class="n">responses</span><span class="p">[</span><span class="s">'sfw'</span><span class="p">]</span><span class="o">.</span><span class="n">safe</span> <span class="c"># True</span>
+</pre></div>
+
+<h4>
+<a name="-miradormiradorclientclassify_buffer" class="anchor" href="#-miradormiradorclientclassify_buffer"><span class="octicon octicon-link"></span></a>
+<a name="classify_buffer"></a> mirador.MiradorClient#classify_buffer</h4>
+
+<p>This is a simple helper when only classifying one buffer, it returns a <code>mirador.MiradorResult</code> object directly, instead of a <code>mirador.MiradorResultList</code>. The interface is otherwise identical to classify_buffers:</p>
+
+<div class="highlight highlight-python"><pre><span class="n">nsfw_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_buffer</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+<span class="n">nsfw_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_buffer</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">'nsfw.jpg'</span><span class="p">,</span> <span class="s">'r'</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+</pre></div>
+
+<h3>
+<a name="-miradormiradorclientclassify_data_uris" class="anchor" href="#-miradormiradorclientclassify_data_uris"><span class="octicon octicon-link"></span></a>
+<a name="classify_data_uris"></a> mirador.MiradorClient#classify_data_uris</h3>
+
+<p>This method exists as a convenience for simplified client-server communication when using clients that work with data uris (e.g., in web applications). For example, given this javascript (using jQuery to be concise):</p>
+
+<div class="highlight highlight-javascript"><pre>
+<span class="nx">$</span><span class="p">(</span><span class="s1">'#form-field'</span><span class="p">).</span><span class="nx">on</span><span class="p">(</span><span class="s1">'change'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">file</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">files</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+      <span class="nx">reader</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FileReader</span><span class="p">();</span>
+
+  <span class="nx">reader</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">$</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s1">'/proxy/mirador'</span><span class="p">,</span> <span class="p">{</span> <span class="nx">id</span><span class="o">:</span> <span class="nx">file</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="nx">data</span><span class="o">:</span> <span class="nx">e</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">result</span> <span class="p">}).</span><span class="nx">done</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">res</span><span class="p">);</span>
+    <span class="p">});</span>
+  <span class="p">};</span>
+
+  <span class="nx">reader</span><span class="p">.</span><span class="nx">readAsDataURL</span><span class="p">(</span><span class="nx">file</span><span class="p">);</span>
+<span class="p">});</span>
+</pre></div>
+
+<p>We could handle that request on the server with this code:</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">import</span> <span class="nn">mirador</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">jsonify</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">mc</span> <span class="o">=</span> <span class="n">mirador</span><span class="o">.</span><span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_api_key'</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s">'/proxy/mirador'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">(</span><span class="s">'POST'</span><span class="p">,))</span>
+<span class="k">def</span> <span class="nf">proxy_image</span><span class="p">():</span>
+
+  <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">'id'</span><span class="p">]</span>
+  <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">form</span><span class="p">[</span><span class="s">'data'</span><span class="p">]</span>
+
+  <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span>
+      <span class="o">**</span><span class="n">client</span><span class="o">.</span><span class="n">classify_data_uri</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">__dict__</span><span class="p">))</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">'__main__'</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+</pre></div>
+
+<p>This example shows the singular, <code>classify_data_uri</code>, however, the multiple -- <code>classify_data_uris</code>, has an identical interface.</p>
+
+<h2>
+<a name="-classifying-urls" class="anchor" href="#-classifying-urls"><span class="octicon octicon-link"></span></a>
+<a name="classifying-urls"></a> Classifying Urls</h2>
+
+<p>There are a couple of requirements to be mindful of when classifying urls, they must meet the following criteria:</p>
+
+<ul>
+<li>be publically-accessibly</li>
+<li>have a correctly set mimetype (<code>image/*</code>)</li>
+<li>respond/be retrievable in less than <code>mirador.MiradorClient.TIMEOUT</code> seconds</li>
+<li>not require query paramters</li>
+</ul><p>Given that, the interface for classifying urls is identical to that when using <a href="#classify_files">classify_files</a></p>
+
+<h3>
+<a name="-miradormiradorclientclassify_urls" class="anchor" href="#-miradormiradorclientclassify_urls"><span class="octicon octicon-link"></span></a>
+<a name="classify_urls"></a> mirador.MiradorClient#classify_urls</h3>
+
+<p>Since urls are text and are generally short, our client uses the url as an id by default:</p>
+
+<div class="highlight highlight-python"><pre><span class="kn">import</span> <span class="nn">mirador</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">mirador</span><span class="o">.</span><span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_api_key'</span><span class="p">)</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_urls</span><span class="p">(</span><span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">,</span> <span class="s">'http://static.mirador.im/test/sfw.jpg'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">results</span><span class="p">[</span><span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">]</span>
+
+</pre></div>
+
+<p>However, as with classifying files, an id can be specified either through keyword arguments or a dictionary:</p>
+
+<div class="highlight highlight-python"><pre>
+<span class="c"># these are equivalent</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_urls</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">,</span> <span class="n">sfw</span><span class="o">=</span><span class="s">'http://static.mirador.im/test/sfw.jpg'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">results</span><span class="p">[</span><span class="s">'nsfw'</span><span class="p">]</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_urls</span><span class="p">({</span><span class="s">'nsfw'</span><span class="p">:</span> <span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">,</span> <span class="s">'sfw'</span><span class="p">:</span> <span class="s">'http://static.mirador.im/test/sfw.jpg'</span><span class="p">})</span>
+<span class="k">print</span> <span class="n">results</span><span class="p">[</span><span class="s">'nsfw'</span><span class="p">]</span>
+
+</pre></div>
+
+<h4>
+<a name="-miradormiradorclientclassify_url" class="anchor" href="#-miradormiradorclientclassify_url"><span class="octicon octicon-link"></span></a>
+<a name="classify_url"></a> mirador.MiradorClient#classify_url</h4>
+
+<p>As with the other methods/data types, you can also classify a single url using the convenience function <code>classify_url</code>. This will return a mirador.MiradorResult object:</p>
+
+<div class="highlight highlight-python"><pre><span class="n">nsfw_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_url</span><span class="p">(</span><span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">)</span>
+
+<span class="n">nsfw_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_url</span><span class="p">(</span><span class="n">nsfw</span><span class="o">=</span><span class="s">'http://static.mirador.im/test/nsfw.jpg'</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">nsfw_result</span><span class="o">.</span><span class="n">id</span> <span class="c"># "nsfw"</span>
+</pre></div>
+
+<h2>
+<a name="-miradormiradorresult" class="anchor" href="#-miradormiradorresult"><span class="octicon octicon-link"></span></a>
+<a name="result"></a> mirador.MiradorResult</h2>
+
+<p>The <code>MiradorResult</code> object reprents the classification result for a single image/url. It has the following properties:</p>
 
 <ul>
 <li>
-<code>MiradorResult.name</code> - the url or filename used in the request</li>
+<code>id</code> <code>[string|int]</code> - a unique identifier for the result</li>
 <li>
-<code>MiradorResult.safe</code> - (boolean) indicated if image is 'flagged' by API</li>
+<code>safe</code> <code>[boolean]</code> - indicates if an image contains adult content.</li>
 <li>
-<code>MiradorResult.value</code> - (float) value 0.0 - 1.0 indicated confidence of decision</li>
-</ul><h4>
-<a name="miradorresultclassify_urlsurls---miradorresult" class="anchor" href="#miradorresultclassify_urlsurls---miradorresult"><span class="octicon octicon-link"></span></a><code>MiradorResult.classify_urls(*urls) -&gt; [MiradorResult]</code>
-</h4>
-
-<p>This has an indentical inteface to <code>classify_files</code>, except it expects http/https urls.</p>
-
-<div class="highlight highlight-python"><pre><span class="kn">from</span> <span class="nn">mirador</span> <span class="kn">import</span> <span class="n">MiradorClient</span>
-
-<span class="n">mc</span> <span class="o">=</span> <span class="n">MiradorClient</span><span class="p">(</span><span class="s">'your_key_here'</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">mc</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'http://example.com/pic2.jpg'</span><span class="p">,</span> <span class="s">'http://example.com/pic3.jpg'</span><span class="p">):</span>
-    <span class="k">print</span> <span class="s">"{name}, {safe}, {value}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">res</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
-</pre></div>
+<code>value</code> <code>[float 0.0-1.0]</code> - the likelyhood that the image does contain adult content (for implementing a custom threshold)</li>
+<li>
+<code>name</code> <code>[string]</code> <strong>DEPRECATED</strong> - maps to <code>id</code>
+</li>
+</ul><p>This object contains a helper <code>to_json</code> method, along with <code>__str__</code> and <code>__repr__</code> overrides that provide easy visual access to information about the result.</p>
 
 <h2>
-<a name="extensions--integrations" class="anchor" href="#extensions--integrations"><span class="octicon octicon-link"></span></a>Extensions &amp; Integrations</h2>
+<a name="-miradormiradorresultlist" class="anchor" href="#-miradormiradorresultlist"><span class="octicon octicon-link"></span></a>
+<a name="result-list"></a> mirador.MiradorResultList</h2>
 
-<p>We are in the process of providing extensions and integrations into common frameworks. This package contains an experimental django integration. It is highly advised against use right now, although the code is located in <a href="mirador/ext/django.py">ext/django.py</a>, if you want to take a look.</p>
+<p>The purpose of the result list (over a built-in <code>list</code>) is to allow for indexing by a Result's <code>id</code>, which can be achieved through regular bracket syntax. You can iterate the <code>MiradorResultList</code> object as a <code>dict</code>:</p>
+
+<div class="highlight highlight-python"><pre>
+<span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">classify_files</span><span class="p">(</span><span class="s">'test1.jpg'</span><span class="p">,</span> <span class="s">'test2.jpg'</span><span class="p">)</span>
+<span class="n">results</span><span class="p">[</span><span class="s">'test1.jpg'</span><span class="p">]</span> <span class="c"># MiradorResult</span>
+
+<span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">"{}, {}"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">))</span> <span class="c"># test1.jpg, MiradorResult</span>
+
+</pre></div>
+
+<p>The <code>MiradorResultList</code> object also has a <code>__len__</code> override so you can easily check how many results you have received.</p>
+
+<h2>
+<a name="contributing--issues" class="anchor" href="#contributing--issues"><span class="octicon octicon-link"></span></a>Contributing / Issues</h2>
+
+<p>Please submit any issues as issues <a href="http://github.com/mirador-cv/mirador-py/issues">here on github</a>, feel free to submit a pull request, or for immediate support, contact us at <a href="mailto:support@mirador.im">support@mirador.im</a>.</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/mirador-cv">mirador-cv</a></p>
