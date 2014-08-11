@@ -23,12 +23,22 @@ class TestMiradorClient(unittest.TestCase):
         self.nsfw_filename = _p.join(dirname, 'images/nsfw.jpg')
         self.sfw_filename = _p.join(dirname, 'images/sfw.jpg')
 
-
     def test_invalid_apikey(self):
 
         with self.assertRaises(UnauthorizedException):
             c = MiradorClient('invalid-key')
             c.classify_urls('http://static.mirador.im/test/nsfw.jpg')
+
+    def test_http_request(self):
+
+        mc = MiradorClient(MIRADOR_API_KEY, use_https=False)
+
+        nsfw = mc.classify_url("http://static.mirador.im/test/nsfw.jpg")
+
+        self.assertIsNotNone(nsfw)
+        self.assertIsNotNone(nsfw)
+        self.assertGreaterEqual(nsfw.value, 0.50)
+        self.assertFalse(nsfw.safe)
 
     def test_bad_request(self):
 

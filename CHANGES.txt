@@ -9,3 +9,5 @@ v0.2.1, 7/22/2014 -- Null logging handler, error handler better in mirador-clien
 v0.2.2, 7/29/2014 -- Better expl of output; examples directory
 v0.2.3, 8/2/2014 -- Output works better as iterator; yields k-v pairs
 v0.3.0, 8/5/2014 -- Significant changes; new single-methods, data uri method, better documentation
+v0.3.1, 8/6/2014 -- Updated PyPi Readme
+v0.3.2, 8/6/2014 -- Added SSL Support; HTTPS by default, `use_https` argument in MiradorClient

@@ -80,7 +80,7 @@ class MiradorClient(object):
     Mirador API. Returns [MiradorResult] on all method
     """
 
-    API_BASE = "http://api.mirador.im"
+    API_BASE = "://api.mirador.im"
     CLASSIFY_ENDPOINT = "/v1/classify"
     HEADERS = {
         'User-Agent': 'MiradorClient/1.0 Python'
@@ -94,7 +94,7 @@ class MiradorClient(object):
     MAX_LEN = 2
     MAX_ID_LEN = 256
 
-    def __init__(self, api_key, timeout=10):
+    def __init__(self, api_key, timeout=10, use_https=True):
         """Instaniate a MiradorClient
         Args:
             api_key: the mirador api key (string)
@@ -104,9 +104,30 @@ class MiradorClient(object):
             A MiradorClient instance
         """
         self._log = logging.getLogger(__name__)
+
+        if not api_key:
+            raise MiradorException("api key required")
+
         self._api_key = api_key
 
-        self._log.info(
+        # by default, use https for all request;
+        # give an option to use http in the event
+        # that the client is having issues with the cert/
+        # has a bad ssl install
+        if not use_https:
+            self._protocol = 'http'
+            self._log.debug("using http for requests")
+
+        else:
+            self._protocol = 'https'
+
+        # construct the URL that we are going to use
+        # for requests
+        self._url = (
+            self._protocol + self.API_BASE + self.CLASSIFY_ENDPOINT
+        )
+
+        self._log.debug(
             "instantiating MiradorClient with key: {}"
             .format(self._api_key)
         )
@@ -128,7 +149,7 @@ class MiradorClient(object):
             )
 
             r = requests.post(
-                self.API_BASE + self.CLASSIFY_ENDPOINT,
+                self._url,
                 data=payload,
                 headers=self.HEADERS,
                 timeout=self.TIMEOUT,
