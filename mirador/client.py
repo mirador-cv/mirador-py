@@ -94,7 +94,7 @@ class MiradorClient(object):
     MAX_LEN = 2
     MAX_ID_LEN = 256
 
-    def __init__(self, api_key, timeout=10, use_https=True):
+    def __init__(self, api_key, timeout=10, use_https=False):
         """Instaniate a MiradorClient
         Args:
             api_key: the mirador api key (string)

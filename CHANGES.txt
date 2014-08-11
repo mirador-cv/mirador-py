@@ -11,3 +11,4 @@ v0.2.3, 8/2/2014 -- Output works better as iterator; yields k-v pairs
 v0.3.0, 8/5/2014 -- Significant changes; new single-methods, data uri method, better documentation
 v0.3.1, 8/6/2014 -- Updated PyPi Readme
 v0.3.2, 8/6/2014 -- Added SSL Support; HTTPS by default, `use_https` argument in MiradorClient
+v0.3.3, 8/6/2014 -- Temporarily set SSL to off by default; issue with cert on some providers
